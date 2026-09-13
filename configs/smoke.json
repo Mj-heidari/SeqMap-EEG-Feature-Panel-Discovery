@@ -1,0 +1,12 @@
+{
+  "seed": 2026,
+  "duration": 60,
+  "inner_folds": 2,
+  "n_estimators": 12,
+  "min_samples_leaf": 3,
+  "max_depth": 5,
+  "candidates": "blocks",
+  "max_steps": 3,
+  "one_se_rule": true,
+  "bootstrap": 30
+}

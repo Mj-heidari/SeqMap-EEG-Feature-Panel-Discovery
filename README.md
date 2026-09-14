@@ -1,12 +1,19 @@
 # SeqMap
 
-Sequential EEG feature-combination selection with random forests, nested release evaluation, and visual stability audits.
+Sequential EEG feature-panel discovery with random forests, release-blocked
+evaluation, and explanation views that stay interpretable when the result is
+negative.
 
-**Research software and manuscript draft. Demonstration heatmaps use synthetic fixtures, not HBN results.**
+**Headline result.** On 514 children and adolescents from HBN-EEG releases R4,
+R5, R7 and R9, no reproducible resting-state panel was found for CBCL
+attention-factor extreme groups (pooled balanced accuracy 0.498). The identical
+features, classifier and protocol recover age band at 0.724 and sex at 0.686,
+so the pipeline demonstrably works and the limit is the label. See
+`paper/main.pdf`.
 
-## Windows quick start
+## Quick start
 
-Use a separate virtual environment from Repo3:
+Install 64-bit Python 3.12 and Git, then in PowerShell:
 
 ```powershell
 git clone https://github.com/Mj-heidari/Repo4.git
@@ -14,52 +21,75 @@ cd Repo4
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[bdf]"
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe -m hbn_r4.cli demo --output demo_data/features.csv
-.\.venv\Scripts\python.exe -m hbn_r4.cli search --features demo_data/features.csv --config configs/smoke.json --output outputs/smoke
-.\.venv\Scripts\python.exe -m hbn_r4.cli plot --results outputs/smoke
 ```
 
-See [Windows_Run_Guide.pdf](docs/Windows_Run_Guide.pdf) for both projects and BDF preparation. Use a new output directory per run.
+## Reproducing the study
 
-Your dataset root is `D:\EEG_Dataset\HBN_100Hz`, with folders `R4_L100_bdf`, `R5_L100_bdf`, `R7_L100_bdf`, and `R9_L100_bdf`. The shared data layer supports `inspect-data`, `inspect-bdf`, `prepare-bdf`, `prepare-cohort`, `validate-data`, `convert-mat`, and `extract`. Diagnoses, channels, EO/EC event intervals and preprocessing decisions require verification on the real files.
-
-## Research runs
-
-The same extracted feature CSV can be used in both repositories. From Repo4, if Repo3 is a sibling folder:
+One command builds the feature table directly from the 100 Hz BDF releases:
 
 ```powershell
-.\.venv\Scripts\python.exe -m hbn_r4.cli search --features ../Repo3/local/features.csv --config configs/research_blocks.json --output outputs/research_blocks
-.\.venv\Scripts\python.exe -m hbn_r4.cli plot --results outputs/research_blocks
+.\.venv\Scripts\python.exe scripts\extract_features.py --root "D:\EEG_Dataset\HBN_100Hz" --output local\features.csv
 ```
 
-| Configuration | Search | Candidate forest fits per outer release |
-|---|---|---:|
-| `research_blocks.json` | 12 regional/band blocks, up to 6 steps | 171 |
-| `research_bands.json` | 36 individual static band-power features, up to 10 steps | 945 |
-| `research_features_expensive.json` | 315 individual features, up to 12 steps | 11,142 |
+It writes `features.csv`, a per-participant exclusion log, and an audit file
+recording every preprocessing setting. Then:
 
-Each count excludes three final comparator fits. Start with block search. Individual searches can be expensive; no runtime or >90% accuracy is promised.
+```powershell
+.\.venv\Scripts\python.exe -m hbn_r4.cli search  --features local\features.csv --config configs\attention_blocks.json --output outputs\attention
+.\.venv\Scripts\python.exe -m hbn_r4.cli plot    --results outputs\attention
+.\.venv\Scripts\python.exe -m hbn_r4.cli explain --features local\features.csv --config configs\attention_blocks.json --output outputs\explain
+```
 
-The best next addition is selected by mean inner balanced accuracy. A one-SE parsimony heuristic chooses a compact panel along the greedy trajectory. The result is not an exhaustive/global optimum. Outer release labels never enter selection. Random forest evaluates signal-processing features; it does not extract spectral features from raw EEG.
+`explain` computes both explanation views for the primary target and the two
+positive controls, and writes the manuscript figures.
 
-## Visual outputs
+## Study definition
 
-`plot` exports PDF and PNG versions of six views:
+| | |
+|---|---|
+| Cohort | HBN-EEG R4, R5, R7, R9; ages 6–17; resting state available |
+| Target | CBCL attention factor, top vs bottom tertile — **not** an ADHD diagnosis |
+| Controls | Age band and sex, from the identical representation |
+| Montage | Six symmetric scalp regions, 13 electrodes each (78 of 129) |
+| Filter | 4th-order Butterworth IIR band-pass 1–40 Hz, average reference |
+| Rejection | 250 µV peak-to-peak after a per-recording bad-channel screen |
+| Features | 315: regional spectra, spectral-model parameters, debiased weighted phase-lag connectivity, regional strength, and EO/EC contrasts |
+| Budgets | 20 s and 40 s per condition, nested |
+| Evaluation | Leave-one-release-out, all fitting inside outer-training releases |
 
-1. Selected panel by held-out release.
-2. Co-selection frequency (not biological interaction strength).
-3. Conditional inner-score gain for candidate additions.
-4. Panel size versus inner score, with chosen panels marked.
-5. Untouched-release performance of selected, first-step and all-candidate models.
-6. Individual feature selection frequency.
+The distribution carries no clinician-assigned ADHD label, so the target is
+named by what it is: an attention-problem extreme-group contrast derived from a
+questionnaire bifactor.
 
-Complete candidates and paths are retained in JSON; plots of large feature searches show a readable subset. Outer models, predictions, paired family-bootstrap comparisons, feature frequencies and Jaccard similarities are saved. There is one selected panel per outer fold; a descriptive consensus is not a newly validated universal best panel.
+## Two explanation views, and why both are needed
 
-See [EXPERIMENTS.md](docs/EXPERIMENTS.md), [VALIDATION.md](docs/VALIDATION.md), and the draft in `paper/main.pdf`. Rebuild the paper using `python scripts/render_bibliography.py`, followed by two `pdflatex main.tex` runs inside `paper/`.
+`explain` reports block permutation importance and single-block performance
+together. Permutation importance answers what a block adds that no other block
+supplies; in a redundant representation that is near zero even for a strongly
+decodable target. Fitting each block alone answers what information the block
+contains. Only the pair separates *no signal anywhere* from *signal duplicated
+across many blocks* — which is exactly the distinction this dataset turns on.
 
-## Synthetic visualization preview
+## Interpreting selected panels
 
-The figures below are software fixtures only. Actual HBN plots are generated by running the same commands on your audited feature table.
+Selected panels are unstable across outer folds in this cohort, and that
+instability is **not** a symptom of the null: it is just as pronounced for the
+age control, where accuracy is high and reproduces in every release. When
+several blocks carry the same information, which one a greedy search reaches
+first is close to arbitrary. Report a panel as one adequate subset, never as
+the biomarker set.
 
-![Synthetic panel selection](docs/illustrations/synthetic_panel_selection.png)
-![Synthetic conditional gains](docs/illustrations/synthetic_conditional_gain.png)
+## Preprocessing notes
+
+Two label-blind quality gates precede epoching, both consequential on this
+release. Recordings whose median absolute amplitude exceeds 50 µV are rejected
+as structurally corrupt. Within the rest, a channel whose median four-second
+peak-to-peak amplitude departs from the montage median by more than a factor
+of three is dropped; without this screen a single faulty electrode discards
+every epoch of an otherwise usable recording. The 250 µV epoch threshold was
+set in a diagnosis-blinded pilot: the conventional 150 µV discards most
+eyes-open epochs in this pediatric cohort, where blinks dominate.
+
+See [EXPERIMENTS.md](docs/EXPERIMENTS.md), [VALIDATION.md](docs/VALIDATION.md)
+and [DATA_CONTRACT.md](docs/DATA_CONTRACT.md). Keep recordings, local manifests
+and outputs outside git.

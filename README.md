@@ -12,7 +12,7 @@ six scalp regions, which is why block permutation importance stays under 1.2
 points and selected panels share only 17–23% of their features across folds. A
 CBCL attention-factor extreme-group contrast, evaluated under the identical
 protocol, stays at chance (0.498) and establishes the specificity of the
-decodable structure. See [RESULTS.md](docs/RESULTS.md).
+decodable structure. 
 
 ## Quick start
 
@@ -93,7 +93,3 @@ every epoch of an otherwise usable recording. The 250 µV epoch threshold was
 set in a diagnosis-blinded pilot: the conventional 150 µV discards most
 eyes-open epochs in this pediatric cohort, where blinks dominate.
 
-See [RESULTS.md](docs/RESULTS.md), [EXPERIMENTS.md](docs/EXPERIMENTS.md),
-[VALIDATION.md](docs/VALIDATION.md) and
-[DATA_CONTRACT.md](docs/DATA_CONTRACT.md). Keep recordings, local manifests and
-outputs outside git.
